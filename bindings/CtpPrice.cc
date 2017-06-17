@@ -108,7 +108,7 @@ void CtpPrice::AddFrontAddress(const FunctionCallbackInfo<Value>& args) {
 
 	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
 	obj->AssertInitialized(isolate);
-	obj->m_api->RegisterFront();
+	// obj->m_api->RegisterFront();
 }
 
 void CtpPrice::AddNameServer(const FunctionCallbackInfo<Value>& args) {
@@ -116,7 +116,7 @@ void CtpPrice::AddNameServer(const FunctionCallbackInfo<Value>& args) {
 
 	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
 	obj->AssertInitialized(isolate);
-	obj->m_api->RegisterFront();
+	// obj->m_api->RegisterFront();
 }
 
 
@@ -214,16 +214,16 @@ void CtpPrice::Subscribe(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
 	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
-	obj->value_ += 1;
+	// obj->value_ += 1;
 
-	args.GetReturnValue().Set(Number::New(isolate, obj->value_));
+	// args.GetReturnValue().Set(Number::New(isolate, obj->value_));
 }
 
 void CtpPrice::Unsubscribe(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
 	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
-	obj->value_ += 1;
+	// obj->value_ += 1;
 
-	args.GetReturnValue().Set(Number::New(isolate, obj->value_));
+	// args.GetReturnValue().Set(Number::New(isolate, obj->value_));
 }
