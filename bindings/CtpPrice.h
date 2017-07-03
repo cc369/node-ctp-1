@@ -1,9 +1,14 @@
 #pragma once
 
+// Inlcude the uv
+#include <uv.h>
+
 #include <node.h>
 #include <node_object_wrap.h>
 
 #include <ThostFtdcMdApi.h>
+
+#include "readerwriterqueue.h"
 
 #ifndef NS_XISCA_BINDINGS
 #define NS_XISCA_BINDINGS \
@@ -47,7 +52,37 @@ namespace javascript {
 		void Release();
 		void Init();
 
-		void AssertInitialized(v8::Isolate *isolate);
+		int AssertInitialized(v8::Isolate *isolate);
+
+		void SetIsolate(v8::Isolate *isolate);
+		v8::Isolate *GetIsolate();
+
+		uv_async_t async;
+
+		// Event handlers
+	public:
+		virtual void OnFrontConnected() override;
+
+	public:
+		/**
+		 * Always run this functio in main thread of Javascript.
+		 *
+		 * Parse and trigger target javascript event
+		 */
+		void HandleEventQueue();
+
+	private:
+		struct ctp_message {
+			// Name of the event
+			std::string *event;
+
+			int error_code;
+			std::string error;
+			int request_id;
+			bool is_last;
+		};
+
+		moodycamel::ReaderWriterQueue<ctp_message> queue;
 	};
 }
 

@@ -54,6 +54,8 @@
 		  "module.cpp",
 		  "V8Helper.h",
 		  "GetObjectField.cpp",
+		  "readerwritequeue.h",
+		  "atomicops.h",
 	  ],
 	  "dependencies": [ "copy" ],
     }
