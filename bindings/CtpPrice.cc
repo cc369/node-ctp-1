@@ -25,9 +25,18 @@ DECL_STR(BrokerID);
 DECL_STR(Password);
 DECL_STR(UserID);
 
+const static std::string gEvtConnect = "connect";
+enum eventType {
+	gEvtTypeUnknown = 0,
+	gEvtTypeFirst = 0,
+	gEvtTypeConnect = 1,
+
+	gEvtTypeLast
+};
+
 // Persitent str lists.
 
-static void initString(Persistent<String> persistent, Isolate *isolate, const char* str) {
+static void initString(Persistent<String> &persistent, Isolate *isolate, const char* str) {
 	persistent.Reset(isolate, String::NewFromUtf8(isolate, str));
 }
 
@@ -41,7 +50,6 @@ static void intializeStrings(Isolate *isolate) {
 	INIT_STR(OneTimePassword);
 	INIT_STR(ClientIPAddress);
 	INIT_STR(LoginRemark);
-
 }
 
 static int optAssignString(Isolate *isolate,
@@ -68,7 +76,7 @@ static int optAssignString(Isolate *isolate,
 		}
 
 		Local<String> str = value->ToString();
-		str->WriteOneByte((unsigned char *)ptrDest, maxDestLength);
+		str->WriteUtf8(ptrDest, maxDestLength);
 	}
 
 	return 0;
@@ -250,6 +258,26 @@ void CtpPrice::AddFrontAddress(const FunctionCallbackInfo<Value>& args) {
 		return;
 	}
 
+	// Check the number of arguments passed.
+	if (args.Length() < 1) {
+		// Throw an Error that is passed back to JavaScript
+		isolate->ThrowException(Exception::TypeError(
+			String::NewFromUtf8(isolate, "AddFrontAddress function requires 1 argument.")));
+		return;
+	}
+
+	if (!args[0]->IsString()) {
+		isolate->ThrowException(Exception::TypeError(
+			String::NewFromUtf8(isolate, "The first arguments for AddFrontAddress should be a string")));
+		return;
+	}
+
+	Local<String> str = args[0]->ToString();
+	char *buffer = new char[str->Length()];
+	str->WriteUtf8(buffer);
+	obj->m_api->RegisterFront(buffer);
+
+	delete buffer;
 	// obj->m_api->RegisterFront();
 }
 
@@ -261,7 +289,26 @@ void CtpPrice::AddNameServer(const FunctionCallbackInfo<Value>& args) {
 		return;
 	}
 
-	// obj->m_api->RegisterFront();
+	// Check the number of arguments passed.
+	if (args.Length() < 1) {
+		// Throw an Error that is passed back to JavaScript
+		isolate->ThrowException(Exception::TypeError(
+			String::NewFromUtf8(isolate, "AddNameServer function requires 1 argument.")));
+		return;
+	}
+
+	if (!args[0]->IsString()) {
+		isolate->ThrowException(Exception::TypeError(
+			String::NewFromUtf8(isolate, "The first arguments for AddNameServer should be a string")));
+		return;
+	}
+
+	Local<String> str = args[0]->ToString();
+	char *buffer = new char[str->Length()];
+	str->WriteUtf8(buffer);
+	obj->m_api->RegisterNameServer(buffer);
+
+	delete buffer;
 }
 
 void CtpPrice::New(const FunctionCallbackInfo<Value>& args) {
@@ -338,7 +385,7 @@ void CtpPrice::Login(const FunctionCallbackInfo<Value>& args) {
 	OPT_ASSIGN_LG(ClientIPAddress);
 	OPT_ASSIGN_LG(LoginRemark);
 
-	int result = obj->m_api->ReqUserLogin(&login, args[1]->ToNumber()->Int32Value);
+	int result = obj->m_api->ReqUserLogin(&login, args[1]->Int32Value());
 	args.GetReturnValue().Set(Number::New(isolate, result));
 }
 
@@ -361,6 +408,22 @@ void CtpPrice::Unsubscribe(const FunctionCallbackInfo<Value>& args) {
 }
 
 void CtpPrice::OnFrontConnected() {
+	ctp_message m;
+	// Fill the message here.
+
+	// Success message
+	m.error_code = 0;
+	m.event = &gEvtConnect;
+
+	m.type = gEvtTypeConnect;
+	m.is_last = true;
+
+	// For broadcast message only.
+	m.request_id = 0;
+	m.pointer = nullptr;
+	
+	queue.enqueue(m);
+
 	this->async.data = this;
 
 	// This function just append a simple message to the queue, 
@@ -372,6 +435,16 @@ void CtpPrice::OnFrontConnected() {
 	uv_async_send(&async);
 }
 
-void HandleEventQueue() {
+// Pick data out fromd queue, and then pack them as Node values.
+void CtpPrice::HandleEventQueue() {
+	ctp_message *pEle = this->queue.peek();
 
+	while (pEle) {
+		// Nothing to handle.
+		printf("Handling message!\n");
+		
+		// Pop the first element
+		queue.pop();
+		pEle = queue.peek();
+	}
 }

@@ -74,12 +74,18 @@ namespace javascript {
 	private:
 		struct ctp_message {
 			// Name of the event
-			std::string *event;
+			const std::string *event;
 
 			int error_code;
 			std::string error;
 			int request_id;
 			bool is_last;
+
+			// Message type
+			int type;
+
+			// Data pointer
+			void *pointer;
 		};
 
 		moodycamel::ReaderWriterQueue<ctp_message> queue;

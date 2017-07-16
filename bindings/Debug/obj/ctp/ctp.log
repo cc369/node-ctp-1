@@ -1,6 +1,6 @@
 ﻿  CtpPrice.cc
-..\CtpPrice.cc(339): error C3867: 'v8::Value::Int32Value': non-standard syntax; use '&' to create a pointer to member
-..\CtpPrice.cc(362): error C2440: '=': cannot convert from 'int' to 'void *'
-  ..\CtpPrice.cc(362): note: Conversion from integral type to pointer type requires reinterpret_cast, C-style cast or function-style cast
   module.cpp
+  GetObjectField.cpp
+  win_delay_load_hook.cc
   Generating Code...
+LINK : fatal error LNK1104: cannot open file 'C:\Users\karl\.node-gyp\8.1.2\Debug\node.lib'
