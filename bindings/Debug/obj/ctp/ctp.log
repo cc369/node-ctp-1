@@ -1,6 +1,0 @@
-﻿  CtpPrice.cc
-  module.cpp
-  GetObjectField.cpp
-  win_delay_load_hook.cc
-  Generating Code...
-LINK : fatal error LNK1104: cannot open file 'C:\Users\karl\.node-gyp\8.1.2\Debug\node.lib'

@@ -54,6 +54,7 @@ namespace javascript {
 
 		int AssertInitialized(v8::Isolate *isolate);
 
+		v8::Isolate *mp_isolate;
 		void SetIsolate(v8::Isolate *isolate);
 		v8::Isolate *GetIsolate();
 

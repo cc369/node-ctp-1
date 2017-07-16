@@ -448,3 +448,11 @@ void CtpPrice::HandleEventQueue() {
 		pEle = queue.peek();
 	}
 }
+
+Isolate *CtpPrice::GetIsolate() {
+	return mp_isolate;
+}
+
+void CtpPrice::SetIsolate(Isolate *isolate) {
+	mp_isolate = isolate;
+}
