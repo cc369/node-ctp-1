@@ -149,20 +149,13 @@ void run_in_main_thread(uv_async_t *async) {
 }
 
 CtpPrice::CtpPrice(const char *pszFlowPath, const bool bIsUsingUdp, const bool bIsMulticast)
-	: m_api(nullptr)
+	: m_api(nullptr), mb_init(false)
 {
 	m_api = CThostFtdcMdApi::CreateFtdcMdApi(pszFlowPath, bIsUsingUdp, bIsMulticast);
-	
-	// Initialize the libuv callback.
-	uv_async_init(uv_default_loop(), &async, run_in_main_thread);
-
-	this->async.data = this;
 }
 
 CtpPrice::~CtpPrice() {
 	Release();
-
-	uv_close((uv_handle_t*) &async, NULL);
 }
 
 void CtpPrice::Release() {
@@ -170,6 +163,13 @@ void CtpPrice::Release() {
 		m_api->Release();
 		m_api = nullptr;
 	}
+
+	// Only be called when API is initialized.
+	if (mb_init) {
+		uv_close((uv_handle_t *)&async, NULL);
+	}
+
+	printf("Released\n");
 }
 
 void CtpPrice::RegisterSpi() {
@@ -178,7 +178,16 @@ void CtpPrice::RegisterSpi() {
 }
 
 void CtpPrice::Init() {
-	m_api->Init();
+	// Initialize the libuv callback.
+	if (!mb_init) {
+		uv_async_init(uv_default_loop(), &async, run_in_main_thread);
+
+		this->async.data = this;
+
+		m_api->Init();
+
+		mb_init = true;
+	}
 }
 
 // -------------------------------- V8 Interfaces --------------------------------
@@ -189,7 +198,7 @@ void CtpPrice::Init(Local<Object> exports) {
 	// Prepare constructor template
 	Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
 	tpl->SetClassName(String::NewFromUtf8(isolate, "CtpPrice"));
-	tpl->InstanceTemplate()->SetInternalFieldCount(0);
+	tpl->InstanceTemplate()->SetInternalFieldCount(5);
 
     // Initialize the CTP strs;
 
@@ -273,7 +282,8 @@ void CtpPrice::AddFrontAddress(const FunctionCallbackInfo<Value>& args) {
 	}
 
 	Local<String> str = args[0]->ToString();
-	char *buffer = new char[str->Length()];
+	char *buffer = new char[str->Length() + 1];
+	ZeroMemory(buffer, str->Length() + 1);
 	str->WriteUtf8(buffer);
 	obj->m_api->RegisterFront(buffer);
 
@@ -305,6 +315,7 @@ void CtpPrice::AddNameServer(const FunctionCallbackInfo<Value>& args) {
 
 	Local<String> str = args[0]->ToString();
 	char *buffer = new char[str->Length()];
+	ZeroMemory(buffer, str->Length() + 1);
 	str->WriteUtf8(buffer);
 	obj->m_api->RegisterNameServer(buffer);
 
@@ -317,6 +328,7 @@ void CtpPrice::New(const FunctionCallbackInfo<Value>& args) {
 	if (args.IsConstructCall()) {
 		// Invoked as constructor: `new MyObject(...)`
 		// double value = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
+		printf("Start calling\n");
 		CtpPrice* obj = new CtpPrice();
 		obj->SetIsolate(isolate);
 		obj->Wrap(args.This());

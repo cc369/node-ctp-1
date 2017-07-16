@@ -59,6 +59,7 @@ namespace javascript {
 		v8::Isolate *GetIsolate();
 
 		uv_async_t async;
+		bool mb_init;
 
 		// Event handlers
 	public:
