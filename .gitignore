@@ -33,3 +33,6 @@
 
 *.idea/
 *.con
+
+config/
+node_modules/

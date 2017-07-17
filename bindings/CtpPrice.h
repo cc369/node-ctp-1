@@ -54,16 +54,29 @@ namespace javascript {
 
 		int AssertInitialized(v8::Isolate *isolate);
 
-		v8::Isolate *mp_isolate;
-		void SetIsolate(v8::Isolate *isolate);
-		v8::Isolate *GetIsolate();
+		// v8::Isolate *mp_isolate;
+		//void SetIsolate(v8::Isolate *isolate);
+		//v8::Isolate *GetIsolate();
 
 		uv_async_t async;
+		/*uv_async_t m_async_wait;*/
 		bool mb_init;
 
+
+
 		// Event handlers
+		v8::Persistent<v8::Function> m_handler;
 	public:
 		virtual void OnFrontConnected() override;
+		virtual void OnFrontDisconnected(int reason) override;
+		virtual void OnHeartBeatWarning(int nTimeLapse) override;
+		virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, 
+			CThostFtdcRspInfoField *pRspInfo, 
+			int nRequestID, 
+			bool bIsLast) override;
+
+		virtual void OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+		virtual void OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 
 	public:
 		/**
@@ -73,11 +86,8 @@ namespace javascript {
 		 */
 		void HandleEventQueue();
 
-	private:
+	public:
 		struct ctp_message {
-			// Name of the event
-			const std::string *event;
-
 			int error_code;
 			std::string error;
 			int request_id;
@@ -90,7 +100,17 @@ namespace javascript {
 			void *pointer;
 		};
 
+	private:
 		moodycamel::ReaderWriterQueue<ctp_message> queue;
+
+	private:
+#define DECL_EVENT(event) void HandleEvent##event(v8::Isolate *isolate, v8::Local<v8::Function> &cb, ctp_message *msg)
+		DECL_EVENT(Connect);
+		DECL_EVENT(Disconnect);
+		DECL_EVENT(HeartBeatWarning);
+		DECL_EVENT(Login);
+		DECL_EVENT(Error);
+		DECL_EVENT(Subscribe);
 	};
 }
 

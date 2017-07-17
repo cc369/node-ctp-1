@@ -1,0 +1,31 @@
+{
+  "name": "node-ctp",
+  "version": "0.0.1",
+  "description": "Ctp Bindings for Node.js",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kcauchy/node-ctp.git"
+  },
+  "keywords": [
+    "Node",
+    "CTP",
+    "binding",
+    "trading",
+    "China"
+  ],
+  "author": "karl@cauchies.org",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kcauchy/node-ctp/issues"
+  },
+  "homepage": "https://github.com/kcauchy/node-ctp#readme",
+  "dependencies": {
+    "config": "^1.26.1",
+    "eventemitter3": "^2.0.3",
+    "iconv-lite": "^0.4.18"
+  }
+}
