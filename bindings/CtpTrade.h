@@ -1,7 +1,9 @@
 #pragma once
 
+// Inlcude the uv
 #include "CtpModule.h"
-#include <ThostFtdcMdApi.h>
+
+#include <ThostFtdcTraderApi.h>
 
 #include "readerwriterqueue.h"
 
@@ -11,13 +13,13 @@ NS_XISCA_BINDINGS
 
 namespace javascript {
 
-	class CtpPrice : public node::ObjectWrap, public CThostFtdcMdSpi {
+	class CtpTrade : public node::ObjectWrap, public CThostFtdcTraderSpi {
 	public:
 		static void Init(v8::Local<v8::Object> exports);
 
 	private:
-		explicit CtpPrice(const char *pszFlowPath = "", const bool bIsUsingUdp = false, const bool bIsMulticast = false);
-		~CtpPrice();
+		explicit CtpTrade(const char *pszFlowPath = "");
+		~CtpTrade();
 
 		static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
 		static v8::Persistent<v8::Function> constructor;
@@ -32,8 +34,9 @@ namespace javascript {
 		static void RegisterSpi(const v8::FunctionCallbackInfo<v8::Value>& args);
 		static void Release(const v8::FunctionCallbackInfo<v8::Value>& args);
 		static void Init(const v8::FunctionCallbackInfo<v8::Value>& args);
+		static void QueryInstruments(const v8::FunctionCallbackInfo<v8::Value>& args);
 
-		CThostFtdcMdApi *m_api;
+		CThostFtdcTraderApi *m_api;
 		void RegisterSpi();
 		void Release();
 		void Init();
@@ -54,20 +57,22 @@ namespace javascript {
 		virtual void OnFrontConnected() override;
 		virtual void OnFrontDisconnected(int reason) override;
 		virtual void OnHeartBeatWarning(int nTimeLapse) override;
-		virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, 
-			CThostFtdcRspInfoField *pRspInfo, 
-			int nRequestID, 
+		virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
+			CThostFtdcRspInfoField *pRspInfo,
+			int nRequestID,
 			bool bIsLast) override;
 
 		virtual void OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
-		virtual void OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
-		virtual void OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData) override;
+		virtual void OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, 
+			CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+
+
 	public:
 		/**
-		 * Always run this functio in main thread of Javascript.
-		 *
-		 * Parse and trigger target javascript event
-		 */
+		* Always run this functio in main thread of Javascript.
+		*
+		* Parse and trigger target javascript event
+		*/
 		void HandleEventQueue();
 
 	public:
@@ -93,8 +98,7 @@ namespace javascript {
 		DECL_EVENT(HeartBeatWarning);
 		DECL_EVENT(Login);
 		DECL_EVENT(Error);
-		DECL_EVENT(Subscribe);
-		DECL_EVENT(Feed);
+		DECL_EVENT(QueryInstruments);
 	};
 }
 

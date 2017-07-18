@@ -1,5 +1,5 @@
 
-#include "CtpPrice.h"
+#include "CtpTrade.h"
 
 #include <node_buffer.h>
 
@@ -7,13 +7,9 @@ using namespace std;
 using namespace v8;
 using namespace xisca::bindings::javascript;
 
-Persistent<Function> CtpPrice::constructor;
+Persistent<Function> CtpTrade::constructor;
 
-// Persistent Strings.
-
-//DECL_STR(login);
-//DECL_STR(disconnect);
-//DECL_STR(hbWarning);
+// Utility functions
 
 enum eventType {
 	gEvtTypeUnknown = 0,
@@ -23,13 +19,10 @@ enum eventType {
 	gEvtTypeHeartBeatWarning = 3,
 	gEvtTypeLogin = 4,
 	gEvtTypeError = 5,
-	gEvtTypeSubscribe = 6,
-	gEvtTypeFeed = 7,
+	gEvtTypeQueryInstruments = 6,
 
 	gEvtTypeLast
 };
-
-// Utility functions
 
 //template<typename Type>
 // Local<Type>
@@ -49,21 +42,21 @@ static void GetObjectField(Handle<Object> object, Handle<Value> key) {
 // This function run in main thread.
 // The only thing it would do is just call the main thread to start working.
 static void run_in_main_thread(uv_async_t *async) {
-	CtpPrice *price = (CtpPrice *)async->data;
+	CtpTrade *price = (CtpTrade *)async->data;
 	price->HandleEventQueue();
 }
 
-CtpPrice::CtpPrice(const char *pszFlowPath, const bool bIsUsingUdp, const bool bIsMulticast)
+CtpTrade::CtpTrade(const char *pszFlowPath)
 	: m_api(nullptr), mb_init(false)
 {
-	m_api = CThostFtdcMdApi::CreateFtdcMdApi(pszFlowPath, bIsUsingUdp, bIsMulticast);
+	m_api = CThostFtdcTraderApi::CreateFtdcTraderApi(pszFlowPath);
 }
 
-CtpPrice::~CtpPrice() {
+CtpTrade::~CtpTrade() {
 	Release();
 }
 
-void CtpPrice::Release() {
+void CtpTrade::Release() {
 	if (m_api) {
 		m_api->Release();
 		m_api = nullptr;
@@ -76,12 +69,12 @@ void CtpPrice::Release() {
 	}
 }
 
-void CtpPrice::RegisterSpi() {
+void CtpTrade::RegisterSpi() {
 	// Use this in constructor is not safe.
 	m_api->RegisterSpi(this);
 }
 
-void CtpPrice::Init() {
+void CtpTrade::Init() {
 	// Initialize the libuv callback.
 	if (!mb_init) {
 		// uv_async_init(uv_default_loop(), &m_async_wait, run_in_main_thread);
@@ -97,12 +90,12 @@ void CtpPrice::Init() {
 
 // -------------------------------- V8 Interfaces --------------------------------
 
-void CtpPrice::Init(Local<Object> exports) {
+void CtpTrade::Init(Local<Object> exports) {
 	Isolate* isolate = exports->GetIsolate();
 
 	// Prepare constructor template
 	Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
-	tpl->SetClassName(String::NewFromUtf8(isolate, "CtpPrice"));
+	tpl->SetClassName(String::NewFromUtf8(isolate, "CtpTrade"));
 	tpl->InstanceTemplate()->SetInternalFieldCount(7);
 
     // Initialize the CTP strs;
@@ -114,17 +107,17 @@ void CtpPrice::Init(Local<Object> exports) {
 	NODE_SET_PROTOTYPE_METHOD(tpl, "addFront", AddFrontAddress);
 	NODE_SET_PROTOTYPE_METHOD(tpl, "addNS", AddNameServer);
 	NODE_SET_PROTOTYPE_METHOD(tpl, "login", Login);
-	NODE_SET_PROTOTYPE_METHOD(tpl, "subscribe", Subscribe);
+	NODE_SET_PROTOTYPE_METHOD(tpl, "queryInstruments", QueryInstruments);
 
 	constructor.Reset(isolate, tpl->GetFunction());
-	exports->Set(String::NewFromUtf8(isolate, "CtpPrice"),
+	exports->Set(String::NewFromUtf8(isolate, "CtpTrade"),
 		tpl->GetFunction());
 }
 
-int CtpPrice::AssertInitialized(v8::Isolate *isolate) {
+int CtpTrade::AssertInitialized(v8::Isolate *isolate) {
 	if (!m_api) {
 		isolate->ThrowException(Exception::Error(
-			String::NewFromUtf8(isolate, "CtpPrice is not initialized.")
+			String::NewFromUtf8(isolate, "CtpTrade is not initialized.")
 		));
 
 		return 1;
@@ -133,10 +126,10 @@ int CtpPrice::AssertInitialized(v8::Isolate *isolate) {
 	return 0;
 }
 
-void CtpPrice::RegisterSpi(const FunctionCallbackInfo<Value>& args) {
+void CtpTrade::RegisterSpi(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
-	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
+	CtpTrade* obj = ObjectWrap::Unwrap<CtpTrade>(args.Holder());
 	if (obj->AssertInitialized(isolate)) {
 		return;
 	}
@@ -159,10 +152,10 @@ void CtpPrice::RegisterSpi(const FunctionCallbackInfo<Value>& args) {
 	obj->m_handler.Reset(isolate, Local<Function>::Cast(args[0]));
 }
 
-void CtpPrice::Release(const FunctionCallbackInfo<Value>& args) {
+void CtpTrade::Release(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
-	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
+	CtpTrade* obj = ObjectWrap::Unwrap<CtpTrade>(args.Holder());
 	if (obj->AssertInitialized(isolate)) {
 		return;
 	}
@@ -170,10 +163,10 @@ void CtpPrice::Release(const FunctionCallbackInfo<Value>& args) {
 	obj->Release();
 }
 
-void CtpPrice::Init(const FunctionCallbackInfo<Value>& args) {
+void CtpTrade::Init(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
-	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
+	CtpTrade* obj = ObjectWrap::Unwrap<CtpTrade>(args.Holder());
 	if (obj->AssertInitialized(isolate)) {
 		return;
 	}
@@ -181,10 +174,10 @@ void CtpPrice::Init(const FunctionCallbackInfo<Value>& args) {
 	obj->Init();
 }
 
-void CtpPrice::AddFrontAddress(const FunctionCallbackInfo<Value>& args) {
+void CtpTrade::AddFrontAddress(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
-	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
+	CtpTrade* obj = ObjectWrap::Unwrap<CtpTrade>(args.Holder());
 	if (obj->AssertInitialized(isolate)) {
 		return;
 	}
@@ -213,10 +206,10 @@ void CtpPrice::AddFrontAddress(const FunctionCallbackInfo<Value>& args) {
 	// obj->m_api->RegisterFront();
 }
 
-void CtpPrice::AddNameServer(const FunctionCallbackInfo<Value>& args) {
+void CtpTrade::AddNameServer(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
-	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
+	CtpTrade* obj = ObjectWrap::Unwrap<CtpTrade>(args.Holder());
 	if (obj->AssertInitialized(isolate)) {
 		return;
 	}
@@ -244,13 +237,13 @@ void CtpPrice::AddNameServer(const FunctionCallbackInfo<Value>& args) {
 	delete[] buffer;
 }
 
-void CtpPrice::New(const FunctionCallbackInfo<Value>& args) {
+void CtpTrade::New(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
 	if (args.IsConstructCall()) {
 		// Invoked as constructor: `new MyObject(...)`
 		// double value = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
-		CtpPrice* obj = new CtpPrice();
+		CtpTrade* obj = new CtpTrade();
 		// obj->SetIsolate(isolate);
 		obj->Wrap(args.This());
 		args.GetReturnValue().Set(args.This());
@@ -267,10 +260,13 @@ void CtpPrice::New(const FunctionCallbackInfo<Value>& args) {
 	}
 }
 
-void CtpPrice::Login(const FunctionCallbackInfo<Value>& args) {
+
+
+void CtpTrade::Login(const FunctionCallbackInfo<Value>& args) {
+
 	Isolate* isolate = args.GetIsolate();
 
-	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
+	CtpTrade* obj = ObjectWrap::Unwrap<CtpTrade>(args.Holder());
 	if (obj->AssertInitialized(isolate)) {
 		return;
 	}
@@ -323,10 +319,10 @@ void CtpPrice::Login(const FunctionCallbackInfo<Value>& args) {
 	args.GetReturnValue().Set(Number::New(isolate, result));
 }
 
-void CtpPrice::Subscribe(const FunctionCallbackInfo<Value>& args) {
+void CtpTrade::QueryInstruments(const FunctionCallbackInfo<Value>& args) {
 	Isolate* isolate = args.GetIsolate();
 
-	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
+	CtpTrade* obj = ObjectWrap::Unwrap<CtpTrade>(args.Holder());
 	if (obj->AssertInitialized(isolate)) {
 		return;
 	}
@@ -334,44 +330,37 @@ void CtpPrice::Subscribe(const FunctionCallbackInfo<Value>& args) {
 	if (args.Length() < 1) {
 		// Throw an Error that is passed back to JavaScript
 		isolate->ThrowException(Exception::Error(
-			String::NewFromUtf8(isolate, "Subscribe function requires 1 argument")));
+			String::NewFromUtf8(isolate, "Subscribe function requires 2 arguments")));
 		return;
 	}
 
-	if (!args[0]->IsArray()) {
+	if (!args[0]->IsObject()) {
 		isolate->ThrowException(Exception::Error(
-			String::NewFromUtf8(isolate, "The first arguments for Subscribe request should be an array")));
+			String::NewFromUtf8(isolate, "The first arguments for Subscribe request should be an object")));
 		return;
 	}
 
-	Local<Array> arr = Local<Array>::Cast(args[0]);
-	uint32_t length = arr->Length();
+	if (!args[1]->IsInt32()) {
+		isolate->ThrowException(Exception::Error(
+			String::NewFromUtf8(isolate, "The first arguments for Subscribe request should be an integer")));
+		return;
+	}
 
-	char **instruments = new char *[length];
-	for (uint32_t i = 0; i < length; i++) {
-		Local<String> str = arr->Get(i)->ToString();
-		instruments[i] = new char[str->Length() + 2];
-		str->WriteUtf8(instruments[i]);
-		instruments[i][str->Length()] = '\0';
-	}
-	
-	obj->m_api->SubscribeMarketData(instruments, length);
-	for (uint32_t i = 0; i < length; i++) {
-		delete[] instruments[i];
-	}
-	delete[] instruments;
+	CThostFtdcQryInstrumentField qryInst;
+	ZeroMemory(&qryInst, sizeof(qryInst));
+	Local<Object> req = args[0]->ToObject();
+
+#define OPT_ASSIGN_RQI(strk) OPT_ASSIGN(strk, qryInst)
+	OPT_ASSIGN_RQI(InstrumentID);
+	OPT_ASSIGN_RQI(ExchangeID);
+	OPT_ASSIGN_RQI(ExchangeInstID);
+	OPT_ASSIGN_RQI(ProductID);
+
+	int32_t reqId = args[1]->Int32Value();
+	obj->m_api->ReqQryInstrument(&qryInst, reqId);
 }
 
-void CtpPrice::Unsubscribe(const FunctionCallbackInfo<Value>& args) {
-	Isolate* isolate = args.GetIsolate();
-
-	CtpPrice* obj = ObjectWrap::Unwrap<CtpPrice>(args.Holder());
-	// obj->value_ += 1;
-
-	// args.GetReturnValue().Set(Number::New(isolate, obj->value_));
-}
-
-void CtpPrice::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
+void CtpTrade::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	CThostFtdcRspInfoField *pRspInfo,
 	int nRequestID,
 	bool bIsLast) {
@@ -405,7 +394,7 @@ void CtpPrice::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	uv_async_send(&async);
 }
 
-void CtpPrice::OnFrontConnected() {
+void CtpTrade::OnFrontConnected() {
 	ctp_message m;
 	// Fill the message here.
 
@@ -432,7 +421,7 @@ void CtpPrice::OnFrontConnected() {
 	uv_async_send(&async);
 }
 
-void CtpPrice::OnFrontDisconnected(int reason) {
+void CtpTrade::OnFrontDisconnected(int reason) {
 	ctp_message m;
 	// Fill the message here.
 
@@ -459,7 +448,7 @@ void CtpPrice::OnFrontDisconnected(int reason) {
 	uv_async_send(&async);
 }
 
-void CtpPrice::OnHeartBeatWarning(int nTimeLapse) {
+void CtpTrade::OnHeartBeatWarning(int nTimeLapse) {
 	ctp_message m;
 	// Fill the message here.
 
@@ -486,8 +475,7 @@ void CtpPrice::OnHeartBeatWarning(int nTimeLapse) {
 	uv_async_send(&async);
 }
 
-
-void CtpPrice::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
+void CtpTrade::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
 	ctp_message m;
 	if (pRspInfo) {
 		m.error_code = pRspInfo->ErrorID;
@@ -518,7 +506,7 @@ void CtpPrice::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool
 	uv_async_send(&async);
 }
 
-void CtpPrice::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+void CtpTrade::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument,
 	CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
 	ctp_message m;
 	if (pRspInfo) {
@@ -530,12 +518,12 @@ void CtpPrice::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificIn
 		m.error_code = 0;
 	}
 
-	m.type = gEvtTypeSubscribe;
+	m.type = gEvtTypeQueryInstruments;
 	m.is_last = bIsLast;
 
 	// For broadcast message only.
 	m.request_id = nRequestID;
-	m.pointer = new CThostFtdcSpecificInstrumentField(*pSpecificInstrument);
+	m.pointer = new CThostFtdcInstrumentField(*pInstrument);
 
 	queue.enqueue(m);
 
@@ -549,33 +537,42 @@ void CtpPrice::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificIn
 
 	uv_async_send(&async);
 }
+//
+//void CtpTrade::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+//	CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
+//	printf("Subscribe \n");
+//
+//	ctp_message m;
+//	if (pRspInfo) {
+//		m.error_code = pRspInfo->ErrorID;
+//		m.error = pRspInfo->ErrorMsg;
+//	}
+//	else {
+//		// Success message
+//		m.error_code = 0;
+//	}
+//
+//	m.type = gEvtTypeSubscribe;
+//	m.is_last = bIsLast;
+//
+//	// For broadcast message only.
+//	m.request_id = nRequestID;
+//	m.pointer = new CThostFtdcSpecificInstrumentField(*pSpecificInstrument);
+//
+//	queue.enqueue(m);
+//
+//	this->async.data = this;
+//
+//	// This function just append a simple message to the queue, 
+//	// and then wakeup the main thread.
+//	// This is because the uv can call the main thread only once, even there are 
+//	// multiply uv_async_send calls.
+//	// We then provide the private queue inside it.
+//
+//	uv_async_send(&async);
+//}
 
-void CtpPrice::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData) {
-	ctp_message m;
-	// Success message
-	m.error_code = 0;
-
-	m.type = gEvtTypeFeed;
-	m.is_last = true;
-
-	// For broadcast message only.
-	m.request_id = 0;
-	m.pointer = new CThostFtdcDepthMarketDataField(*pDepthMarketData);
-
-	queue.enqueue(m);
-
-	this->async.data = this;
-
-	// This function just append a simple message to the queue, 
-	// and then wakeup the main thread.
-	// This is because the uv can call the main thread only once, even there are 
-	// multiply uv_async_send calls.
-	// We then provide the private queue inside it.
-
-	uv_async_send(&async);
-}
-
-Local<Object> getErrorObj(Isolate *isolate, CtpPrice::ctp_message *msg) {
+Local<Object> getErrorObj(Isolate *isolate, CtpTrade::ctp_message *msg) {
 	Local<Object> error = Object::New(isolate);
 
 	if (msg->error_code) {
@@ -590,7 +587,7 @@ Local<Object> getErrorObj(Isolate *isolate, CtpPrice::ctp_message *msg) {
 	return error;
 }
 
-#define HandleEvent(event) void CtpPrice::HandleEvent##event(v8::Isolate *isolate, v8::Local<v8::Function> &cb, ctp_message *msg)
+#define HandleEvent(event) void CtpTrade::HandleEvent##event(v8::Isolate *isolate, v8::Local<v8::Function> &cb, ctp_message *msg)
 HandleEvent(Connect) {
 	const unsigned argc = 1;
 	Local<Value> argv[argc] = { String::NewFromUtf8(isolate, "connect") }; // A persistent object is useless here.
@@ -662,19 +659,52 @@ HandleEvent(Error) {
 	node::MakeCallback(isolate, isolate->GetCurrentContext()->Global(), cb, argc, argv);
 }
 
-HandleEvent(Subscribe) {
+HandleEvent(QueryInstruments) {
 	// Handle the login object.
 	Local<Object> object = Object::New(isolate);
-	const CThostFtdcSpecificInstrumentField *ptr = (const CThostFtdcSpecificInstrumentField *)msg->pointer;
+	const CThostFtdcInstrumentField *ptr = (const CThostFtdcInstrumentField *)msg->pointer;
 	if (ptr) {
 		ASSIGN_TO_OBJ(InstrumentID);
+		ASSIGN_TO_OBJ(ExchangeID);
+		ASSIGN_TO_OBJ(InstrumentName);
+		ASSIGN_TO_OBJ(ExchangeInstID);
+		ASSIGN_TO_OBJ(ProductID);
+		object->Set(String::NewFromUtf8(isolate, "ProductClass"), Int32::New(isolate, ptr->ProductClass));
+		object->Set(String::NewFromUtf8(isolate, "DeliveryYear"), Int32::New(isolate, ptr->DeliveryYear));
+		object->Set(String::NewFromUtf8(isolate, "DeliveryMonth"), Int32::New(isolate, ptr->DeliveryMonth));
+		object->Set(String::NewFromUtf8(isolate, "MaxMarketOrderVolume"), Int32::New(isolate, ptr->MaxMarketOrderVolume));
+		object->Set(String::NewFromUtf8(isolate, "MinMarketOrderVolume"), Int32::New(isolate, ptr->MinMarketOrderVolume));
+		object->Set(String::NewFromUtf8(isolate, "MaxLimitOrderVolume"), Int32::New(isolate, ptr->MaxLimitOrderVolume));
+		object->Set(String::NewFromUtf8(isolate, "MinLimitOrderVolume"), Int32::New(isolate, ptr->MinLimitOrderVolume));
+		object->Set(String::NewFromUtf8(isolate, "VolumeMultiple"), Int32::New(isolate, ptr->VolumeMultiple));
+		object->Set(String::NewFromUtf8(isolate, "PriceTick"), Number::New(isolate, ptr->PriceTick));
+		ASSIGN_TO_OBJ(CreateDate);
+		ASSIGN_TO_OBJ(OpenDate);
+		ASSIGN_TO_OBJ(ExpireDate);
+		ASSIGN_TO_OBJ(StartDelivDate);
+		ASSIGN_TO_OBJ(EndDelivDate);
+		object->Set(String::NewFromUtf8(isolate, "InstLifePhase"), Int32::New(isolate, ptr->InstLifePhase));
+		object->Set(String::NewFromUtf8(isolate, "IsTrading"), Boolean::New(isolate, ptr->IsTrading));
+		object->Set(String::NewFromUtf8(isolate, "PositionType"), Int32::New(isolate, ptr->PositionType));
+		object->Set(String::NewFromUtf8(isolate, "PositionDateType"), Int32::New(isolate, ptr->PositionDateType));
+
+		object->Set(String::NewFromUtf8(isolate, "LongMarginRatio"), Number::New(isolate, ptr->LongMarginRatio));
+		object->Set(String::NewFromUtf8(isolate, "ShortMarginRatio"), Number::New(isolate, ptr->ShortMarginRatio));
+		object->Set(String::NewFromUtf8(isolate, "MaxMarginSideAlgorithm"), Int32::New(isolate, ptr->MaxMarginSideAlgorithm));
+		ASSIGN_TO_OBJ(UnderlyingInstrID);
+		object->Set(String::NewFromUtf8(isolate, "StrikePrice"), Number::New(isolate, ptr->StrikePrice));
+		object->Set(String::NewFromUtf8(isolate, "OptionsType"), Int32::New(isolate, ptr->OptionsType));
+		object->Set(String::NewFromUtf8(isolate, "UnderlyingMultiple"), Number::New(isolate, ptr->UnderlyingMultiple));
+		object->Set(String::NewFromUtf8(isolate, "CombinationType"), Int32::New(isolate, ptr->CombinationType));
+
+		delete ptr;
 	}
 
 	Local<Object> error = getErrorObj(isolate, msg);
 
 	const unsigned argc = 3;
 	Local<Value> argv[argc] = {
-		String::NewFromUtf8(isolate, "subscribe"),
+		String::NewFromUtf8(isolate, "query-instruments"),
 		object,
 		// Handle error here.
 		error
@@ -682,75 +712,10 @@ HandleEvent(Subscribe) {
 	node::MakeCallback(isolate, isolate->GetCurrentContext()->Global(), cb, argc, argv);
 }
 
-HandleEvent(Feed) {
-	// Handle the login object.
-	Local<Object> object = Object::New(isolate);
-	const CThostFtdcDepthMarketDataField *ptr = (const CThostFtdcDepthMarketDataField *)msg->pointer;
-	if (ptr) {
-		ASSIGN_TO_OBJ(TradingDay);
-		ASSIGN_TO_OBJ(InstrumentID);
-		ASSIGN_TO_OBJ(ExchangeID);
-		ASSIGN_TO_OBJ(ExchangeInstID);
-		ASSIGN_TO_OBJ(InstrumentID);
-
-#define OPT_ASSIGN_DOUBLE(d) if (ptr->d == DBL_MAX) { \
-			object->Set(String::NewFromUtf8(isolate, #d), Null(isolate)); \
-		} else { \
-			object->Set(String::NewFromUtf8(isolate, #d), Number::New(isolate, ptr->d)); \
-		}
-
-		OPT_ASSIGN_DOUBLE(LastPrice);
-		OPT_ASSIGN_DOUBLE(PreSettlementPrice);
-		OPT_ASSIGN_DOUBLE(PreClosePrice);
-		OPT_ASSIGN_DOUBLE(PreOpenInterest);
-		OPT_ASSIGN_DOUBLE(OpenPrice);
-		OPT_ASSIGN_DOUBLE(HighestPrice);
-		OPT_ASSIGN_DOUBLE(LowestPrice);
-
-		object->Set(String::NewFromUtf8(isolate, "Volume"), Int32::New(isolate, ptr->Volume));
-
-		OPT_ASSIGN_DOUBLE(Turnover);
-		OPT_ASSIGN_DOUBLE(OpenInterest);
-		OPT_ASSIGN_DOUBLE(ClosePrice);
-		OPT_ASSIGN_DOUBLE(SettlementPrice);
-		OPT_ASSIGN_DOUBLE(UpperLimitPrice);
-		OPT_ASSIGN_DOUBLE(LowerLimitPrice);
-		OPT_ASSIGN_DOUBLE(PreDelta);
-		OPT_ASSIGN_DOUBLE(CurrDelta);
-
-		ASSIGN_TO_OBJ(UpdateTime);
-		object->Set(String::NewFromUtf8(isolate, "UpdateMillisec"), Int32::New(isolate, ptr->UpdateMillisec));
-
-#define PRICE_GROUP(n) \
-			OPT_ASSIGN_DOUBLE(BidPrice##n); \
-			object->Set(String::NewFromUtf8(isolate, "BidVolume"#n), Int32::New(isolate, ptr->BidVolume##n)); \
-			OPT_ASSIGN_DOUBLE(AskPrice##n); \
-			object->Set(String::NewFromUtf8(isolate, "AskVolume"#n), Int32::New(isolate, ptr->AskVolume##n));
-
-		PRICE_GROUP(1);
-		PRICE_GROUP(2);
-		PRICE_GROUP(3);
-		PRICE_GROUP(4);
-		PRICE_GROUP(5);
-
-		OPT_ASSIGN_DOUBLE(AveragePrice);
-		ASSIGN_TO_OBJ(ActionDay);
-
-		delete ptr;
-	}
-
-	const unsigned argc = 2;
-	Local<Value> argv[argc] = {
-		String::NewFromUtf8(isolate, "feed"),
-		object,
-	};
-	node::MakeCallback(isolate, isolate->GetCurrentContext()->Global(), cb, argc, argv);
-}
-
 #define ConnectToEvent(event) case gEvtType##event: HandleEvent##event(isolate, callback, pEle); break
 
 // Pick data out fromd queue, and then pack them as Node values.
-void CtpPrice::HandleEventQueue() {
+void CtpTrade::HandleEventQueue() {
 	Isolate *isolate = v8::Isolate::GetCurrent();
 	HandleScope scope(isolate);
 
@@ -766,8 +731,8 @@ void CtpPrice::HandleEventQueue() {
 			ConnectToEvent(HeartBeatWarning);
 			ConnectToEvent(Error);
 			ConnectToEvent(Login);
-			ConnectToEvent(Subscribe);
-			ConnectToEvent(Feed);
+			ConnectToEvent(QueryInstruments);
+			// ConnectToEvent(Subscribe);
 		}
 
 		// Pop the first element

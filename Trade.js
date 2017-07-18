@@ -1,13 +1,13 @@
 
 const EventEmitter = require('eventemitter3');
-const { CtpPrice: MarketAPI } = require('./bindings/build/Debug/ctp.node');
+const { CtpTrade: TradeAPI } = require('./bindings/build/Debug/ctp.node');
 const iconvLite = require('iconv-lite');
 
-class Market extends EventEmitter {
+class Trade extends EventEmitter {
 
   constructor() {
     super();
-    this.api = new MarketAPI();
+    this.api = new TradeAPI();
 
     this.api.register(this.cb.bind(this));
     this.bInitialized = false;
@@ -71,13 +71,13 @@ class Market extends EventEmitter {
     myData.BrokerID = data.broker;
     myData.UserID = data.account;
     myData.Password = data.password;
-
     this.api.login(myData, reqId);
   }
 
-  subscribe(contracts) {
-    this.api.subscribe(contracts);
+  qInstruments(conditions) {
+    const reqId = ++this.reqId;
+    this.api.queryInstruments(conditions || {}, reqId);
   }
 }
 
-module.exports = Market;
+module.exports = Trade;

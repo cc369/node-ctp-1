@@ -7,6 +7,7 @@
 	  'variables': {
 		'ctp_headers': '<(version)/linux',
 		'market_library': 'thostmduserapi.lib',
+		'trader_library': 'thosttraderapi.lib',
 	  },
 	  'targets': [{
 		'target_name': 'copy',
@@ -26,6 +27,7 @@
 	  'variables': {
 		'ctp_headers': '<(version)/win32/x64',
 		'market_library': 'thostmduserapi.lib',
+		'trader_library': 'thosttraderapi.lib',
       },
       'targets': [{
 		'target_name': 'copy',
@@ -58,9 +60,14 @@
 		"GetObjectField.cpp",
 		"readerwritequeue.h",
 		"atomicops.h",
+		"CtpModule.h",
+		"CtpModule.cpp",
+		"CtpTrade.h",
+		"CtpTrade.cc",
 	  ],
 	  "libraries": [
 		'<(PRODUCT_DIR)/<(market_library)',
+		'<(PRODUCT_DIR)/<(trader_library)',
 	  ],
 	  "dependencies": [ "copy" ],
     }
