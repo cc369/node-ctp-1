@@ -25,6 +25,10 @@ class Market extends EventEmitter {
       data.reason = iconvLite.decode(data.reason, 'gb2312');
     }
 
+    if (event === 'feed' && data && data.InstrumentID) {
+      data.InstrumentID = iconvLite.decode(data.InstrumentID, 'gb2312');
+    }
+
     this.emit(event, data, error);
   }
 

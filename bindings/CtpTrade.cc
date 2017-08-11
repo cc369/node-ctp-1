@@ -229,7 +229,7 @@ void CtpTrade::AddNameServer(const FunctionCallbackInfo<Value>& args) {
 	}
 
 	Local<String> str = args[0]->ToString();
-	char *buffer = new char[str->Length()];
+	char *buffer = new char[str->Length() + 1];
 	ZeroMemory(buffer, str->Length() + 1);
 	str->WriteUtf8(buffer);
 	obj->m_api->RegisterNameServer(buffer);
@@ -664,9 +664,12 @@ HandleEvent(QueryInstruments) {
 	Local<Object> object = Object::New(isolate);
 	const CThostFtdcInstrumentField *ptr = (const CThostFtdcInstrumentField *)msg->pointer;
 	if (ptr) {
-		ASSIGN_TO_OBJ(InstrumentID);
+		object->Set(String::NewFromUtf8(isolate, "InstrumentID"),
+			node::Buffer::Copy(isolate, ptr->InstrumentID, strlen(ptr->InstrumentID)).ToLocalChecked());
+		// ASSIGN_TO_OBJ(InstrumentID);
 		ASSIGN_TO_OBJ(ExchangeID);
-		ASSIGN_TO_OBJ(InstrumentName);
+		object->Set(String::NewFromUtf8(isolate, "InstrumentName"),
+			node::Buffer::Copy(isolate, ptr->InstrumentName, strlen(ptr->InstrumentName)).ToLocalChecked());
 		ASSIGN_TO_OBJ(ExchangeInstID);
 		ASSIGN_TO_OBJ(ProductID);
 		object->Set(String::NewFromUtf8(isolate, "ProductClass"), Int32::New(isolate, ptr->ProductClass));

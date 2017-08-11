@@ -45,8 +45,10 @@ market.on('error', (data) => {
   console.log(data);
 });
 
+const fs = require('fs');
+const feedStream = fs.createWriteStream('feeds.txt');
 market.on('feed', (data) => {
-  console.log(data);
+  feedStream.write(`${JSON.stringify(data)}\n`);
 });
 
 // --------------------------------------
@@ -85,11 +87,14 @@ trade.on('error', (data) => {
   console.log('Trade Error', data);
 });
 
+const writeStream = fs.createWriteStream('instruments.txt');
+
 trade.on('query-instruments', (query, err) => {
   // instruments.push(query.InstrumentID);
-  if (query.InstrumentID.startsWith('au')) {
+  //if (query.InstrumentID.startsWith('au')) {
     instruments.push(query.InstrumentID);
-  }
+    writeStream.write(JSON.stringify(query) + '\n');
+  //}
   if (err.last) {
     console.log('Finished');
     market.subscribe(instruments);

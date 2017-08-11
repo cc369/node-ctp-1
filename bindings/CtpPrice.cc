@@ -236,7 +236,7 @@ void CtpPrice::AddNameServer(const FunctionCallbackInfo<Value>& args) {
 	}
 
 	Local<String> str = args[0]->ToString();
-	char *buffer = new char[str->Length()];
+	char *buffer = new char[str->Length() + 1];
 	ZeroMemory(buffer, str->Length() + 1);
 	str->WriteUtf8(buffer);
 	obj->m_api->RegisterNameServer(buffer);
@@ -688,7 +688,9 @@ HandleEvent(Feed) {
 	const CThostFtdcDepthMarketDataField *ptr = (const CThostFtdcDepthMarketDataField *)msg->pointer;
 	if (ptr) {
 		ASSIGN_TO_OBJ(TradingDay);
-		ASSIGN_TO_OBJ(InstrumentID);
+		// The instrument id could be the encoding gb2312.
+		object->Set(String::NewFromUtf8(isolate, "InstrumentID"),
+			node::Buffer::Copy(isolate, ptr->InstrumentID, strlen(ptr->InstrumentID)).ToLocalChecked());
 		ASSIGN_TO_OBJ(ExchangeID);
 		ASSIGN_TO_OBJ(ExchangeInstID);
 		ASSIGN_TO_OBJ(InstrumentID);

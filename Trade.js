@@ -25,6 +25,11 @@ class Trade extends EventEmitter {
       data.reason = iconvLite.decode(data.reason, 'gb2312');
     }
 
+    if (event === 'query-instruments' && data && data.InstrumentID) {
+      data.InstrumentID = iconvLite.decode(data.InstrumentID, 'gb2312');
+      data.InstrumentName = iconvLite.decode(data.InstrumentName, 'gbk');
+    }
+
     this.emit(event, data, error);
   }
 
