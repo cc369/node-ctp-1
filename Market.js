@@ -1,6 +1,7 @@
 
+const version = process.env.NODE_CTP_DEBUG ? 'Debug' : 'Release';
 const EventEmitter = require('eventemitter3');
-const { CtpPrice: MarketAPI } = require('./bindings/build/Debug/ctp.node');
+const { CtpPrice: MarketAPI } = require(`./bindings/build/${version}/ctp.node`);
 const iconvLite = require('iconv-lite');
 
 class Market extends EventEmitter {

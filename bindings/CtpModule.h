@@ -10,8 +10,15 @@
 
 #endif 
 
+#if !defined(ZeroMemory) && !defined(_MSVC_VER)
+#include <strings.h>
+#define ZeroMemory bzero 
+#endif
+
 #include <uv.h>
 #include <node.h>
+
+#include <float.h>
 
 NS_XISCA_BINDINGS
 

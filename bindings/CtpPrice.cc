@@ -1,6 +1,7 @@
 
 #include "CtpPrice.h"
 
+#include <string.h>
 #include <node_buffer.h>
 
 using namespace std;
@@ -297,7 +298,8 @@ void CtpPrice::Login(const FunctionCallbackInfo<Value>& args) {
 
 	// Copy contents from contents in object login;
 	// The check is required, otherwise there will be a lot of errors.
-	CThostFtdcReqUserLoginField login = { 0 };
+	CThostFtdcReqUserLoginField login;
+        ZeroMemory(&login, sizeof(login));
 	// Copy contents from your object to here.
 
 	// Then I just get that key.

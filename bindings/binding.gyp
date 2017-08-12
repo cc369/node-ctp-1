@@ -5,11 +5,11 @@
   'conditions':[
     ['OS=="linux"',{
 	  'variables': {
-		'ctp_headers': '<(version)/linux',
-		'market_library': 'thostmduserapi.lib',
-		'trader_library': 'thosttraderapi.lib',
-	  },
-	  'targets': [{
+		'ctp_headers': '<(version)/linux/x64',
+		'market_library': 'thostmduserapi.so',
+		'trader_library': 'thosttraderapi.so',
+	  }, 
+          'targets': [{
 		'target_name': 'copy',
 		'copies': [{
 		  'destination': '<(PRODUCT_DIR)',
@@ -49,7 +49,7 @@
   "targets": [
     {
 	  'include_dirs': [
-	  	'<(ctp_headers)',
+		'<(ctp_headers)',
 	  ],
       "target_name": "ctp",
       "sources": [ 
@@ -65,10 +65,26 @@
 		"CtpTrade.h",
 		"CtpTrade.cc",
 	  ],
-	  "libraries": [
+          'conditions': [
+            [ 'OS=="win"', {
+	      "libraries": [
 		'<(PRODUCT_DIR)/<(market_library)',
 		'<(PRODUCT_DIR)/<(trader_library)',
-	  ],
+	      ],
+            }],
+            [ 'OS=="linux"', {
+              "libraries": [
+		'-l:<(market_library)',
+		'-l:<(trader_library)',
+	      ],
+              "library_dirs": [
+                '<(PRODUCT_DIR)',
+              ],
+              "ldflags": [
+                "-Wl,-rpath '-Wl,$$ORIGIN'",
+              ], 
+            }],
+          ],
 	  "dependencies": [ "copy" ],
     }
   ]
