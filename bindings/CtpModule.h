@@ -10,7 +10,7 @@
 
 #endif 
 
-#if !defined(ZeroMemory) && !defined(_MSVC_VER)
+#if !defined(ZeroMemory) && !defined(_MSC_VER)
 #include <strings.h>
 #define ZeroMemory bzero 
 #endif
